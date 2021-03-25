@@ -8,13 +8,13 @@
 #
 #   File Contents:
 #
-#   bob.py opens a socket connection and waits for a request. Once a request is received it will send
+#   bruce.py opens a socket connection and waits for a request. Once a request is received it will send
 #   send a message digest containing his name, his public key, and a signature of his public key signed
-#   by the certificate agencies private key. bob.py then waits for a response from the requesting host.
+#   by the certificate agencies private key. bruce.py then waits for a response from the requesting host.
 #   This datagram should either contain a message or a file. that is encrypted with a symmetric key. This
-#   symmetric key should also be in the message and should be encrypted with bob's public key. Furthermore,
+#   symmetric key should also be in the message and should be encrypted with bruce's public key. Furthermore,
 #   the message should contain a signature of the encrypted message, in order to verify. This verification
-#   is done with sha256 hashing function provided by the cryptography module. bob.py uses the cryptography
+#   is done with sha256 hashing function provided by the cryptography module. bruce.py uses the cryptography
 #   module in order to asymmetric decryption and encryption, as well as symmetric decryption.
 
 import sys
@@ -58,21 +58,21 @@ def sign(message, key):
     return signature
 
 
-# generates a certificate with bob's public key,
+# generates a certificate with bruce's public key,
 # the the public key signed by the certificate agencies
 # private key, and the name of the sender
-def generate_bobs_certificate(bobs_pub, cert_priv):
-    # load bob's public key
-    bobs_public_key = load_public_key(bobs_pub)
+def generate_bruces_certificate(bruces_pub, cert_priv):
+    # load bruce's public key
+    bruces_public_key = load_public_key(bruces_pub)
     # load certificate authorities private key
     certificate_authority_private_key = load_private_key(cert_priv)
-    # cast bob's public key to a byte string and then sign the public key
-    bobs_public_key_bytes = bobs_public_key.public_bytes(encoding=serialization.Encoding.PEM,
+    # cast bruce's public key to a byte string and then sign the public key
+    bruces_public_key_bytes = bruces_public_key.public_bytes(encoding=serialization.Encoding.PEM,
                                                          format=serialization.PublicFormat.SubjectPublicKeyInfo)
-    # sign bob's public key with the CA's private key
-    signature = base64.b64encode(sign(bobs_public_key_bytes, certificate_authority_private_key))
+    # sign bruce's public key with the CA's private key
+    signature = base64.b64encode(sign(bruces_public_key_bytes, certificate_authority_private_key))
     # generate certificate json object and return it
-    certificate_json = b"{{name:bob, pub_key:" + bobs_public_key_bytes + b", signature:" + signature + b"}}\0"
+    certificate_json = b"{{name:Batman, pub_key:" + bruces_public_key_bytes + b", signature:" + signature + b"}}\0"
     return certificate_json
 
 
@@ -124,10 +124,10 @@ def write(file_name, file_contents):
         writer.write(file_contents)
 
 
-# takes bobs priate key and a symmetric key that has been encrypted with
-# bobs public key, decrypts the symmetric key and returns the key and iv
-def get_symmetric_key(bobs_private_key, encrypted_key):
-    decrypted_key = asymmetric_decrypt(bobs_private_key, encrypted_key)
+# takes bruces priate key and a symmetric key that has been encrypted with
+# bruces public key, decrypts the symmetric key and returns the key and iv
+def get_symmetric_key(bruces_private_key, encrypted_key):
+    decrypted_key = asymmetric_decrypt(bruces_private_key, encrypted_key)
     # split the key between the key and the iv
     key = decrypted_key[0:32]
     iv = decrypted_key[32:]
@@ -139,19 +139,19 @@ def validate_contents(contents, hash_bytes):
     if hash_bytes != comparison_hash_bytes:
         exit(0)
     else:
-        print('Message hash checks out\n')
+        print('Message has the correct SHA256 Hash\n')
 
 
-def handle(connection, bobs_priv, bobs_pub, cert_priv):
+def handle(connection, bruces_priv, bruces_pub, cert_priv):
     try:
 
         # Receive the data in small chunks and retransmit it
         data = get_response(connection)
         print('Received:\n  {}\n'.format(data))
         # generate certificate
-        certificate = generate_bobs_certificate(bobs_pub, cert_priv)
+        certificate = generate_bruces_certificate(bruces_pub, cert_priv)
         print('Sending:\n  {}\n'.format(certificate))
-        # send bob's certificate
+        # send bruce's certificate
         connection.sendall(certificate)
         # wait for response from Alice
         data = get_response(connection)
@@ -163,7 +163,7 @@ def handle(connection, bobs_priv, bobs_pub, cert_priv):
         # if the length of the data fields is less than
         # 3 or greater than 4, then the file had the wrong
         # number of fields
-        bobs_private_key = load_private_key(bobs_priv)
+        bruces_private_key = load_private_key(bruces_priv)
         if len(data_fields) < 3 or 4 < len(data_fields):
             print('wrong number of fields returned')
             exit(0)
@@ -174,7 +174,7 @@ def handle(connection, bobs_priv, bobs_pub, cert_priv):
             encrypted_key = base64.b64decode(data_fields[2].split(b'\': \'')[1])
             # get the bytes of the hash
             hash_bytes = base64.b64decode(data_fields[1].split(b'\': \'')[1])
-            iv, key = get_symmetric_key(bobs_private_key, encrypted_key, )
+            iv, key = get_symmetric_key(bruces_private_key, encrypted_key, )
             message = symmetric_decrypt(encrypted_message, key, iv)
             # if hash does not match exit else print message through the console
             # that the messages matched.
@@ -191,15 +191,17 @@ def handle(connection, bobs_priv, bobs_pub, cert_priv):
             # get the encrypted key
             encrypted_key = base64.b64decode(data_fields[3].split(b'\': \'')[1])
             # get the hash to compare
-            # decrypt the key using bobs private key
-            iv, key = get_symmetric_key(bobs_private_key, encrypted_key)
+            # decrypt the key using bruces private key
+            iv, key = get_symmetric_key(bruces_private_key, encrypted_key)
             # decrypt the content of the file
             decrypted_content = symmetric_decrypt(contents, key, iv)
             # decrypt the name of the file
             file_name = symmetric_decrypt(encrypted_file_name, key, iv)
+            print('Decoded file name:\n {}\n'.format(str(file_name, 'utf-8')))
             # compare the hashes to ensure that the integrity of the message is not lost
             validate_contents(contents, hash_bytes)
             file_content = decrypted_content.decode('utf-8')
+            print('Decoded file contents:\n{}\n'.format(str(file_content)))
             # write the file to the file system
             write(file_name, file_content)
             print('File received and written to the file system')
@@ -218,15 +220,15 @@ def main():
         print("Wrong number of arguments supplied")
         exit(0)
     port_no = int(arguments[2])
-    bobs_private_key_filename = arguments[3].encode('utf-8')
-    bobs_public_key_filename = arguments[4].encode('utf-8')
+    bruces_private_key_filename = arguments[3].encode('utf-8')
+    bruces_public_key_filename = arguments[4].encode('utf-8')
     certificate_agency_private = arguments[5].encode('utf-8')
     sock = socket.socket()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     print('--------------------------------------\n')
     # Bind the socket to the port
     sock.bind(('127.0.0.1', port_no))
-    print('Waiting For Connection on 127.0.0.1 port {}\n'.format(str(port_no)))
+    print('Bruce is waiting for a connection at 127.0.0.1:{}\n'.format(str(port_no)))
     # Listen for incoming connections
     sock.listen(1)
     while True:
@@ -235,8 +237,8 @@ def main():
         connection, client_address = sock.accept()
         connection.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         handle(connection,
-               bobs_private_key_filename,
-               bobs_public_key_filename,
+               bruces_private_key_filename,
+               bruces_public_key_filename,
                certificate_agency_private)
 
 

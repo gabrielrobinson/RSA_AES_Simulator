@@ -8,12 +8,12 @@
 #
 # File Contents:
 #
-#   alice.py makes a request to bob.py. bob.py will respond with a digest containing his name, his public
-#   key, and the public key signed with the certificate agencies private key. It is the job of alice.py to
-#   validate the integrity of this file. It verifies that the name is bob, verifies the signature. Once
-#   this is completed, alice.py sends a digest containing the message encrypted with a  symmetric key generated
-#   on the fly, the symmetric key encrypted with bobs public key, and a hash of the encrypted message, so that
-#   the integrity of the message can be verified once bob receives it. All encryption and decryption schemes
+#   james.py makes a request to bruce.py. bruce.py will respond with a digest containing his name, his public
+#   key, and the public key signed with the certificate agencies private key. It is the job of james.py to
+#   validate the integrity of this file. It verifies that the name is bruce, verifies the signature. Once
+#   this is completed, james.py sends a digest containing the message encrypted with a  symmetric key generated
+#   on the fly, the symmetric key encrypted with bruces public key, and a hash of the encrypted message, so that
+#   the integrity of the message can be verified once bruce receives it. All encryption and decryption schemes
 #   are provided by the cryptography module.
 
 import sys
@@ -170,29 +170,29 @@ def main():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     # Connect the socket to the port where the server is listening
     sock.connect((ip, port))
-    print('Communicating with {}:{}'.format(ip, str(port)))
+    print('James has connected wth with {}:{}'.format(ip, str(port)))
     try:
         # Send data
-        sock.sendall(b'Hello\0')
+        sock.sendall(b'\0')
         # Get response
         data = get_response(sock)
         data = data[:-1]
         print('Received:\n  {}\n'.format(data))
         # Parse response
-        name, bobs_pub_key_bytes, signature = parse_response(data)
+        name, bruces_pub_key_bytes, signature = parse_response(data)
         # load the certificate authorities public key
         certificate_authority_pubkey = load_public_key(ca_pub_filename)
         # verify signature with the message
         certificate_authority_pubkey.verify(signature,
-                                            bobs_pub_key_bytes,
+                                            bruces_pub_key_bytes,
                                             padding.PSS(mgf=padding.MGF1(hashes.SHA256()),
                                                         salt_length=padding.PSS.MAX_LENGTH),
                                             hashes.SHA256())
         # confirm name = bob
-        if name != b'bob':
-            print('bob was not the sender')
+        if name != b'Batman':
+            print('Batman was not the person who responded')
             exit(0)
-        response = generate_message(arguments=sys.argv, flag=flag, key_bytes=bobs_pub_key_bytes)
+        response = generate_message(arguments=sys.argv, flag=flag, key_bytes=bruces_pub_key_bytes)
         sock.sendall(response)
         print('Sending:\n  {}\n'.format(response))
     finally:

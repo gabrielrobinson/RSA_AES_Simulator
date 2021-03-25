@@ -31,9 +31,9 @@ from cryptography.hazmat.primitives.asymmetric import padding
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/
 def load_public_key(filename):
     with open(filename, "rb") as key_file:
-        private_key = serialization.load_pem_public_key(
+        public_key = serialization.load_pem_public_key(
             key_file.read(), backend=default_backend())
-        return private_key
+        return public_key
 
 
 # parses response from data

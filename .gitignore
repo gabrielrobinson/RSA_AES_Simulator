@@ -1,0 +1,4 @@
+# file: ~/.gitignore_global
+*.pem
+.DS_Store
+.idea

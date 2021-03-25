@@ -123,14 +123,21 @@ def generate_message(arguments, flag, key_bytes):
 
     # start by generating the symmetric key
     symmetric_key = os.urandom(32)
+    print('Symmetric key:\n   {}\n'.format(symmetric_key))
     iv = os.urandom(16)
+    print('IV:\n   {}\n'.format(symmetric_key))
     # encrypt message with the symmetric key
+    print("Generating encrypted message...\n")
     encrypted_message = symmetric_encrypt(message, symmetric_key, iv)
+    print('AES-Encrypted Message:\n   {}\n'.format(encrypted_message))
     message_hash = sha_256_hash(encrypted_message)
+    print('SHA256 Hash of AES-Encrypted Message:\n   {}\n'.format(message_hash))
     # take the bytes of bobs public key and create key object from those bytes
     pub_key = serialization.load_pem_public_key(key_bytes, backend=default_backend())
     # encrypt the symmetric key with bob's public key
     encrypted_symmetric_key = asymmetric_encrypt(pub_key, symmetric_key + iv)
+    print('RSA encrypted Symmetric Key and IV:\n   {}\n'.format(encrypted_symmetric_key))
+
 
     response = b''
     if flag == '-message':
@@ -170,7 +177,7 @@ def main():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     # Connect the socket to the port where the server is listening
     sock.connect((ip, port))
-    print('James has connected wth with {}:{}'.format(ip, str(port)))
+    print('James has connected wth with {}:{}\n'.format(ip, str(port)))
     try:
         # Send data
         sock.sendall(b'\0')
@@ -183,6 +190,7 @@ def main():
         # load the certificate authorities public key
         certificate_authority_pubkey = load_public_key(ca_pub_filename)
         # verify signature with the message
+        print('Verifying CA signature...\n')
         certificate_authority_pubkey.verify(signature,
                                             bruces_pub_key_bytes,
                                             padding.PSS(mgf=padding.MGF1(hashes.SHA256()),
@@ -190,11 +198,15 @@ def main():
                                             hashes.SHA256())
         # confirm name = bob
         if name != b'Batman':
-            print('Batman was not the person who responded')
+            print('Incorrect signature... Exiting...\n')
             exit(0)
+        else:
+            print('Batman identified as endpoint through signature verification...\n')
+
         response = generate_message(arguments=sys.argv, flag=flag, key_bytes=bruces_pub_key_bytes)
         sock.sendall(response)
-        print('Sending:\n  {}\n'.format(response))
+        # print('Sending:\n  {}\n'.format(response))
+        print('Sending datagram including AES-Encrypted Message, SHA256 Hash of AES-Encrypted Message, and RSA encrypted Symmetric Key and IV...')
     finally:
         print('--------------------------------------\n\n')
         print('closing socket')

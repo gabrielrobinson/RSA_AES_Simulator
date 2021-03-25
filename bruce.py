@@ -66,11 +66,14 @@ def generate_bruces_certificate(bruces_pub, cert_priv):
     bruces_public_key = load_public_key(bruces_pub)
     # load certificate authorities private key
     certificate_authority_private_key = load_private_key(cert_priv)
+    print('Certificate authority\'s private key:\n  {}\n'.format(certificate_authority_private_key))
     # cast bruce's public key to a byte string and then sign the public key
     bruces_public_key_bytes = bruces_public_key.public_bytes(encoding=serialization.Encoding.PEM,
                                                          format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    print('Bruce\'s public key:\n  {}\n'.format(bruces_public_key_bytes))
     # sign bruce's public key with the CA's private key
     signature = base64.b64encode(sign(bruces_public_key_bytes, certificate_authority_private_key))
+    print('SHA256 CA Signature of Bruce\'s public key:\n  {}\n'.format(signature))
     # generate certificate json object and return it
     certificate_json = b"{{name:Batman, pub_key:" + bruces_public_key_bytes + b", signature:" + signature + b"}}\0"
     return certificate_json
@@ -149,8 +152,9 @@ def handle(connection, bruces_priv, bruces_pub, cert_priv):
         data = get_response(connection)
         print('Received:\n  {}\n'.format(data))
         # generate certificate
+        print('Generating Certificate...\n')
         certificate = generate_bruces_certificate(bruces_pub, cert_priv)
-        print('Sending:\n  {}\n'.format(certificate))
+        print('Sending certificate...\n')
         # send bruce's certificate
         connection.sendall(certificate)
         # wait for response from Alice
@@ -170,11 +174,15 @@ def handle(connection, bruces_priv, bruces_pub, cert_priv):
         elif len(data_fields) == 3:
             # parse message fields
             encrypted_message = base64.b64decode(data_fields[0].split(b'\': \'')[1])
+            print('Encrypted message:\n  {}\n'.format(encrypted_message))
             # get the encrypted key
             encrypted_key = base64.b64decode(data_fields[2].split(b'\': \'')[1])
+            print('Encrypted symmetric key and IV:\n  {}\n'.format(encrypted_key))
             # get the bytes of the hash
             hash_bytes = base64.b64decode(data_fields[1].split(b'\': \'')[1])
+            print('SHA256 Hash of encrypted message:\n  {}\n'.format(hash_bytes))
             iv, key = get_symmetric_key(bruces_private_key, encrypted_key, )
+            print('Decrypted symmetric key and iv:\n  {}\n'.format(key, iv))
             message = symmetric_decrypt(encrypted_message, key, iv)
             # if hash does not match exit else print message through the console
             # that the messages matched.
@@ -186,13 +194,17 @@ def handle(connection, bruces_priv, bruces_pub, cert_priv):
             encrypted_file_name = base64.b64decode(data_fields[0].split(b'\': \'')[1])
             # get the contents of the file
             contents = base64.b64decode(data_fields[1].split(b'\': \'')[1])
+            print('Encrypted message:\n  {}\n'.format(contents))
             # get the hash of the file contents
             hash_bytes = base64.b64decode(data_fields[2].split(b'\': \'')[1])
+            print('SHA256 Hash of encrypted message:\n  {}\n'.format(hash_bytes))
             # get the encrypted key
             encrypted_key = base64.b64decode(data_fields[3].split(b'\': \'')[1])
+            print('Encrypted symmetric key and IV:\n  {}\n'.format(encrypted_key))
             # get the hash to compare
             # decrypt the key using bruces private key
             iv, key = get_symmetric_key(bruces_private_key, encrypted_key)
+            print('Decrypted symmetric key and iv:\n  {}\n'.format(key, iv))
             # decrypt the content of the file
             decrypted_content = symmetric_decrypt(contents, key, iv)
             # decrypt the name of the file
@@ -203,7 +215,7 @@ def handle(connection, bruces_priv, bruces_pub, cert_priv):
             file_content = decrypted_content.decode('utf-8')
             print('Decoded file contents:\n{}\n'.format(str(file_content)))
             # write the file to the file system
-            write(file_name, file_content)
+            # write(file_name, file_content)
             print('File received and written to the file system')
     finally:
         print('--------------------------------------\n\n')
